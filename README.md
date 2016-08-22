@@ -10,7 +10,7 @@ Add both Clappr and the markers plugin scripts to your HTML:
 ```html
 <head>
   <script type="text/javascript" src="http://cdn.clappr.io/latest/clappr.min.js"></script>
-  <script type="text/javascript" src="dist/clappr-markers-plugin.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/clappr.markers-plugin/latest/clappr-markers-plugin.js"></script>
 </head>
 ```
 
@@ -41,11 +41,14 @@ The `tooltipBottomMargin` option is optional and specifies the amount of space b
 
 You can customise both the marker and the tooltip by extending the [`ClapprMarkersPlugin.Marker` class](src/marker.js). Look at the comments in that file for details.
 
+## Image Marker
+`ImageMarker` works in the same way as `StandardMarker`, but the second parameter is a url to an image to show in the tooltip.
+
 ## Updating The Time of a Marker
 You can update the time of a marker by calling the `setTime()` method on `StandardMarker`.
 
 ## Adding and Removing Markers Programatically
-You can add a marker programatically by using the `addMarker()` method. To remove a marker use the `removeMarker()` method and provide the isntance to the `Marker` to remove as the first argument.
+You can add a marker programatically by using the `addMarker()` method. To remove a marker use the `removeMarker()` method and provide the instance to the `Marker` to remove as the first argument. To remove all markers use the `clearMarkers()` method.
 
 # Demo
 To run the demo start a web server with the root directory being the root of this repo, and then browse to the "index.html" file in the "demo" folder.
@@ -53,6 +56,8 @@ To run the demo start a web server with the root directory being the root of thi
 I am also hosting a demo at http://tjenkinson.me/clappr-markers-plugin/
 
 # Development
+When submitting a PR please don't include changes to the dist folder.
+
 Install dependencies:
 
 `npm install`

@@ -2,6 +2,7 @@ import {UICorePlugin, Events, $} from 'clappr'
 import './style.sass'
 import Marker from "./marker"
 import StandardMarker from "./standard-marker"
+import ImageMarker from "./image-marker"
 
 export default class MarkersPlugin extends UICorePlugin {
 
@@ -11,6 +12,10 @@ export default class MarkersPlugin extends UICorePlugin {
 
   static get StandardMarker() {
     return StandardMarker
+  }
+
+  static get ImageMarker() {
+    return ImageMarker
   }
 
   // backwards compatibility
@@ -29,6 +34,7 @@ export default class MarkersPlugin extends UICorePlugin {
   constructor(core) {
     super(core)
     this._markers = []
+    this._duration = null
     this._createInitialMarkers()
   }
 
@@ -65,6 +71,12 @@ export default class MarkersPlugin extends UICorePlugin {
     if (!internalMarker) {
       return false
     }
+    this._removeInternalMarker(index)
+    return true
+  }
+
+  _removeInternalMarker(index) {
+    let internalMarker = this._markers[index]
     internalMarker.$marker.remove()
     internalMarker.emitter.off("timeChanged", internalMarker.timeChangedHandler)
     if (internalMarker.$tooltipContainer) {
@@ -74,7 +86,36 @@ export default class MarkersPlugin extends UICorePlugin {
       internalMarker.emitter.off("tooltipChanged", internalMarker.tooltipChangedHandler)
     }
     internalMarker.onDestroy()
-    return true
+    this._markers.splice(index, 1)
+  }
+
+  /*
+   * Clear all existing markers
+   */
+  clearMarkers() {
+    if (!this._markers) {
+      return
+    } 
+    for (let i = this._markers.length - 1; i >= 0; i--) {
+      this._removeInternalMarker(i)
+    }
+  }
+
+  /*
+   * Get all markers
+   */
+  getAll() {
+    return this._markers.map(internalMarker => internalMarker.source)
+  }
+
+  /*
+   * Get marker by index. Can be used with removeMarker() to remove a marker by index.
+   */
+  getByIndex(index) {
+    if (index >= this._markers.length || index < 0) {
+      return null
+    }
+    return this._markers[index].source
   }
 
   _bindContainerEvents() {
@@ -173,8 +214,8 @@ export default class MarkersPlugin extends UICorePlugin {
 
   // calculates and sets the position of the tooltip
   _updateTooltipPosition(marker) {
-    if (!this._mediaControlContainerLoaded) {
-      // renderMarkers() will be called when it has, which will call this
+    if (!this._mediaControlContainerLoaded || !this._duration) {
+      // renderMarkers() will be called when it has loaded, which will call this
       return
     }
     var $tooltipContainer = marker.$tooltipContainer
@@ -185,8 +226,7 @@ export default class MarkersPlugin extends UICorePlugin {
     var bottomMargin = this._getOptions().tooltipBottomMargin || 17
     var width = $tooltipContainer.width()
     var seekBarWidth = this._$tooltips.width()
-    var mediaDuration = this.core.mediaControl.container.getDuration()
-    var leftPos = (seekBarWidth*(marker.time/mediaDuration)) - (width/2)
+    var leftPos = (seekBarWidth*(marker.time/this._duration) - (width/2))
     leftPos = Math.max(0, Math.min(leftPos, seekBarWidth - width))
 
     if (bottomMargin !== marker.tooltipContainerBottom || leftPos !== marker.tooltipContainerLeft) {
@@ -203,15 +243,21 @@ export default class MarkersPlugin extends UICorePlugin {
     this._appendElToMediaControl()
   }
 
+  _updateDuration() {
+    this._duration = this.core.mediaControl.container.getDuration() || null
+  }
+
   _onMediaControlContainerChanged() {
     this._bindContainerEvents()
     this._mediaControlContainerLoaded = true
+    this._updateDuration()
     this._renderMarkers()
   }
 
   _onTimeUpdate() {
     // need to render on time update because if duration is increasing
     // markers will need to be repositioned
+    this._updateDuration()
     this._renderMarkers()
   }
 
@@ -220,14 +266,13 @@ export default class MarkersPlugin extends UICorePlugin {
   }
 
   _renderMarkers() {
-    if (!this._mediaControlContainerLoaded) {
-      // this will be called again once it has
+    if (!this._mediaControlContainerLoaded || !this._duration) {
+      // this will be called again once loaded, or there is a duration > 0
       return
     }
-    var mediaDuration = this.core.mediaControl.container.getDuration()
     this._markers.forEach((marker) => {
       let $el = marker.$marker
-      let percentage = Math.min(Math.max((marker.time/mediaDuration)*100, 0), 100)
+      let percentage = Math.min(Math.max((marker.time/this._duration)*100, 0), 100)
       if (marker.markerLeft !== percentage) {
         $el.css("left", percentage+"%")
         marker.markerLeft = percentage
